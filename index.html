@@ -30,7 +30,7 @@
 </div>
 
 <!-- ⚠ PASTE YOUR APPS SCRIPT WEB APP URL BELOW (same one used everywhere else) ⚠ -->
-<script>const APPS_SCRIPT_URL = "PASTE_YOUR_WEB_APP_URL_HERE";</script>
+<script>const APPS_SCRIPT_URL = https://script.google.com/macros/s/AKfycbzsZQhhsj6go5hIlQi3NnUaydFvPSk-88RhfVyaqcPB-XYckf-qhb3VOeAEZxOqkp73/exec;</script>
 <script>
 async function apiPost(action, payload){
   const res = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({action}, payload)) });
