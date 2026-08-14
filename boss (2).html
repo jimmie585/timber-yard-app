@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timber Yard — Boss Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --cream:#F6F0E6; --paper:#FBF7EF; --walnut:#2B1B12; --walnut-soft:#4A3626; --oak:#9C6B3E; --oak-light:#C99B63; --oak-pale:#EAD9BE; --forest:#43604B; --forest-pale:#E1EAE0; --rust:#B5482C; --rust-pale:#F3E0D8; --ink-light:#7C6A58; --line:#E3D6C1; --shadow:0 3px 14px rgba(43,27,18,0.09); --radius:12px; }
+  *{box-sizing:border-box;} body{margin:0;background:var(--cream);color:var(--walnut);font-family:'Inter',system-ui,sans-serif;}
+  h1,h2,h3{font-family:'Fraunces',Georgia,serif;} .mono{font-family:'IBM Plex Mono',monospace;}
+  header{background:linear-gradient(135deg,var(--walnut),#3a2415);color:var(--oak-pale);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
+  header .brandrow{display:flex;align-items:center;gap:10px;}
+  header .mark{width:34px;height:34px;border-radius:8px;background:repeating-linear-gradient(115deg, var(--oak) 0 4px, var(--oak-light) 4px 8px, var(--oak) 8px 12px);flex-shrink:0;}
+  header .name{font-family:'Fraunces',serif;font-size:19px;color:#fff;font-weight:700;}
+  header .tag{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--oak-light);}
+  .headerbtns{display:flex;gap:8px;flex-wrap:wrap;}
+  main{max-width:1040px;margin:0 auto;padding:22px;}
+  .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab{padding:9px 16px;border-radius:9px;font-size:13.5px;font-weight:600;background:var(--paper);color:var(--ink-light);border:1px solid var(--line);cursor:pointer;transition:.15s;}
+  .tab:hover{background:var(--oak-pale);} .tab.active{background:var(--walnut);color:#fff;border-color:var(--walnut);}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  @media (max-width:800px){.cards{grid-template-columns:repeat(2,1fr);}}
+  .card{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--oak);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+  .card.alert{border-left-color:var(--rust);}
+  .card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-light);font-weight:700;margin-bottom:6px;}
+  .card .value{font-size:24px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+  .value.rust{color:var(--rust);} .value.forest{color:var(--forest);}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;box-shadow:var(--shadow);}
+  .panel h3{margin:0 0 14px;font-size:16px;display:flex;align-items:center;gap:8px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;} th{text-align:left;font-size:10.5px;color:var(--ink-light);text-transform:uppercase;letter-spacing:.03em;padding:9px 8px;border-bottom:2px solid var(--line);font-weight:700;} td{padding:10px 8px;border-bottom:1px solid var(--line);}
+  .num{font-family:'IBM Plex Mono',monospace;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
+  .badge.paid{background:var(--forest-pale);color:var(--forest);} .badge.partial{background:#FCEFD9;color:#96631A;} .badge.unpaid,.badge.low{background:var(--rust-pale);color:var(--rust);}
+  .lowrow{background:var(--rust-pale);} .empty{text-align:center;color:var(--ink-light);padding:28px;font-size:13.5px;}
+  .btn{border:none;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;background:#fff;color:var(--walnut);border:1px solid var(--line);cursor:pointer;transition:.15s;}
+  .btn:hover{background:var(--oak-pale);}
+  .btn.primary{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .btn.primary:hover{background:#385a41;}
+  .config-warning{background:var(--rust-pale);color:var(--rust);padding:16px;border-radius:var(--radius);margin:20px;font-size:13.5px;line-height:1.5;}
+  .updated{font-size:12px;color:var(--ink-light);}
+  .overlay{position:fixed;inset:0;background:rgba(43,27,18,0.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal{background:var(--paper);border-radius:var(--radius);padding:26px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .modal h3{margin-top:0;}
+  label{font-size:12px;font-weight:600;color:var(--ink-light);display:block;margin-bottom:5px;}
+  input,select{width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;color:var(--walnut);font-family:inherit;}
+  .field{margin-bottom:12px;} .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--walnut);color:var(--paper);padding:12px 20px;border-radius:9px;font-size:13.5px;box-shadow:var(--shadow);opacity:0;transition:.25s;z-index:200;white-space:nowrap;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ⚠ PASTE YOUR APPS SCRIPT WEB APP URL BELOW (same as employees.html) ⚠ -->
+<script>const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsZQhhsj6go5hIlQi3NnUaydFvPSk-88RhfVyaqcPB-XYckf-qhb3VOeAEZxOqkp73/exec";</script>
+
+<header>
+  <div class="brandrow"><div class="mark"></div><div><div class="name">Timber Yard</div><div class="tag" id="roleTag">Boss Dashboard</div></div></div>
+  <div class="headerbtns">
+    <button class="btn primary" id="addStockBtn">➕ Add stock</button>
+    <a href="/employees.html" style="text-decoration:none;"><button class="btn">🧾 Employee view</button></a>
+    <button class="btn" id="refreshBtn">↻ Refresh</button>
+    <button class="btn" id="logoutBtn">Log out</button>
+  </div>
+</header>
+<main id="main"></main>
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Session guard: only 'boss' role may view this page ----
+const session = (function(){
+  try{ return JSON.parse(localStorage.getItem('tyd_session')); }catch(e){ return null; }
+})();
+if(!session || !session.role){
+  window.location.href = '/';
+} else if(session.role !== 'boss'){
+  window.location.href = '/employees.html';
+} else {
+  document.getElementById('roleTag').textContent = 'Boss Dashboard · ' + session.name;
+}
+document.getElementById('logoutBtn').onclick = ()=>{ localStorage.removeItem('tyd_session'); window.location.href = '/'; };
+
+let data = { stock:[], customers:[], salesSummary:[], salesLines:[], payments:[], movements:[], users:[], quotations:[], quotationLines:[] };
+let tab = 'overview';
+
+function money(n){ return 'KES ' + Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0}); }
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(v){ const d=new Date(v); return isNaN(d) ? '' : d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+
+async function apiGet(){ const res = await fetch(APPS_SCRIPT_URL + '?action=getData'); return res.json(); }
+async function apiPost(action, payload){
+  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({action}, payload)) });
+  return res.json();
+}
+
+async function loadData(){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR')===0){
+    document.getElementById('main').innerHTML = `<div class="config-warning">Not connected yet. Paste the Apps Script Web App URL into APPS_SCRIPT_URL near the top of this file — it must be the same URL used in employees.html.</div>`;
+    return;
+  }
+  try{ data = await apiGet(); render(); }
+  catch(e){ document.getElementById('main').innerHTML = `<div class="config-warning">Could not load data. Check the Apps Script URL and deployment access ("Anyone").</div>`; }
+}
+
+function stockValue(){ return data.stock.reduce((s,i)=>s+Number(i.Qty)*Number(i.Price),0); }
+function outstanding(){ return data.salesSummary.reduce((s,x)=>s+Number(x.Balance),0); }
+function todaySales(){ const t=new Date().toDateString(); return data.salesSummary.filter(s=>new Date(s.Date).toDateString()===t).reduce((s,x)=>s+Number(x.Total),0); }
+function lowStock(){ return data.stock.filter(i=>Number(i.Qty)<=Number(i.LowThreshold)); }
+
+function render(){
+  document.getElementById('main').innerHTML = `
+    <div class="tabs">
+      ${['overview','stock','sales','quotes','customers','movements','employees'].map(t=>`<button class="tab ${tab===t?'active':''}" data-tab="${t}">${t==='employees'?'Employees & logins':t==='quotes'?'Quotes':t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
+    </div>
+    <div id="tabContent"></div>
+    <div class="updated">Last refreshed ${new Date().toLocaleTimeString()}</div>
+  `;
+  document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{tab=el.dataset.tab; render();});
+  const c = document.getElementById('tabContent');
+  if(tab==='overview') c.innerHTML = renderOverview();
+  else if(tab==='stock') c.innerHTML = renderStock();
+  else if(tab==='sales') c.innerHTML = renderSales();
+  else if(tab==='quotes') c.innerHTML = renderQuotes();
+  else if(tab==='customers') c.innerHTML = renderCustomers();
+  else if(tab==='employees') c.innerHTML = renderEmployeesTab();
+  else c.innerHTML = renderMovements();
+  document.querySelectorAll('[data-adjust]').forEach(el=>el.onclick=()=>openAdjustModal(el.dataset.adjust));
+  const addUserBtn = document.getElementById('addUserBtn');
+  if(addUserBtn) addUserBtn.onclick = async ()=>{
+    const username = document.getElementById('nu_user').value.trim();
+    const password = document.getElementById('nu_pass').value;
+    const name = document.getElementById('nu_name').value.trim();
+    const role = document.getElementById('nu_role').value;
+    if(!username || !password || !name){ showToast('Fill in all fields'); return; }
+    const result = await apiPost('addUser', { username, password, name, role });
+    if(result.success){ data = result.data; showToast('Login created for '+name); render(); }
+    else showToast(result.error || 'Could not create login');
+  };
+}
+
+function renderEmployeesTab(){
+  const users = data.users || [];
+  return `
+    <div class="panel">
+      <h3>➕ Create a login</h3>
+      <div class="row2">
+        <div class="field"><label>Full name</label><input id="nu_name" placeholder="e.g. Peter Kamau"></div>
+        <div class="field"><label>Role</label><select id="nu_role"><option value="employee">Employee</option><option value="boss">Boss</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Username</label><input id="nu_user" placeholder="e.g. peter"></div>
+        <div class="field"><label>Password</label><input id="nu_pass" type="text" placeholder="Choose a password"></div>
+      </div>
+      <button class="btn primary" id="addUserBtn">Create login</button>
+    </div>
+    <div class="panel">
+      <h3>👥 Existing logins</h3>
+      ${users.length===0 ? `<div class="empty">No logins yet — create one above.</div>` : `
+      <table><thead><tr><th>Name</th><th>Username</th><th>Role</th></tr></thead><tbody>
+        ${users.map(u=>`<tr><td>${esc(u.Name)}</td><td>${esc(u.Username)}</td><td><span class="badge ${u.Role==='boss'?'paid':'partial'}">${esc(u.Role)}</span></td></tr>`).join('')}
+      </tbody></table>`}
+      <p style="font-size:12px;color:var(--ink-light);margin-top:12px;">Passwords aren't shown here for basic hygiene — to change one, edit it directly in the Users tab of your Customer Google Sheet.</p>
+    </div>
+  `;
+}
+
+function renderOverview(){
+  const low = lowStock();
+  const recent = [...data.salesSummary].sort((a,b)=>new Date(b.Date)-new Date(a.Date)).slice(0,8);
+  return `
+    <div class="cards">
+      <div class="card"><div class="label">Stock value</div><div class="value">${money(stockValue())}</div></div>
+      <div class="card"><div class="label">Today's sales</div><div class="value forest">${money(todaySales())}</div></div>
+      <div class="card ${outstanding()>0?'alert':''}"><div class="label">Outstanding balances</div><div class="value rust">${money(outstanding())}</div></div>
+      <div class="card ${low.length?'alert':''}"><div class="label">Low stock items</div><div class="value ${low.length?'rust':''}">${low.length}</div></div>
+    </div>
+    ${low.length ? `<div class="panel"><h3>⚠ Low stock</h3><table><thead><tr><th>Item</th><th>Remaining</th><th>Threshold</th></tr></thead><tbody>
+      ${low.map(i=>`<tr class="lowrow"><td>${esc(i.Name)}</td><td class="num">${i.Qty} ${esc(i.Unit)}</td><td class="num">${i.LowThreshold}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}
+    <div class="panel"><h3>📋 Recent sales</h3>
+      ${recent.length===0 ? `<div class="empty">No sales recorded yet.</div>` : `
+      <table><thead><tr><th>Receipt</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>
+        ${recent.map(s=>`<tr><td class="num">#${s.ReceiptNo}</td><td>${esc(s.CustomerName)}</td><td>${fmtDate(s.Date)}</td><td class="num">${money(s.Total)}</td><td><span class="badge ${s.Status}">${s.Status}</span></td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function renderStock(){
+  return `<div class="panel"><h3>🪵 All stock</h3>
+    ${data.stock.length===0 ? `<div class="empty">No stock items yet. Use "Add stock" above.</div>` : `
+    <table><thead><tr><th>Item</th><th>Unit</th><th>Qty</th><th>Price/unit</th><th>Value</th><th></th></tr></thead><tbody>
+    ${data.stock.map(i=>`<tr class="${Number(i.Qty)<=Number(i.LowThreshold)?'lowrow':''}"><td>${esc(i.Name)} ${Number(i.Qty)<=Number(i.LowThreshold)?'<span class="badge low">LOW</span>':''}</td><td>${esc(i.Unit)}</td><td class="num">${i.Qty}</td><td class="num">${money(i.Price)}</td><td class="num">${money(Number(i.Qty)*Number(i.Price))}</td><td><button class="btn" data-adjust="${i.ID}">Adjust</button></td></tr>`).join('')}
+    </tbody></table>`}
+  </div>`;
+}
+
+function renderSales(){
+  const list = [...data.salesSummary].sort((a,b)=>new Date(b.Date)-new Date(a.Date));
+  return `<div class="panel"><h3>💰 All sales</h3>
+    ${list.length===0 ? `<div class="empty">No sales yet.</div>` : `
+    <table><thead><tr><th>Receipt</th><th>Customer</th><th>Date</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody>
+    ${list.map(s=>`<tr><td class="num">#${s.ReceiptNo}</td><td>${esc(s.CustomerName)}</td><td>${fmtDate(s.Date)}</td><td class="num">${money(s.Total)}</td><td class="num">${money(s.Paid)}</td><td class="num" style="color:${Number(s.Balance)>0?'var(--rust)':'inherit'}">${money(s.Balance)}</td><td><span class="badge ${s.Status}">${s.Status}</span></td></tr>`).join('')}
+    </tbody></table>`}
+  </div>`;
+}
+
+function renderQuotes(){
+  const list = [...(data.quotations||[])].sort((a,b)=>new Date(b.Date)-new Date(a.Date));
+  return `<div class="panel"><h3>📄 Quotations</h3>
+    ${list.length===0 ? `<div class="empty">No quotations yet.</div>` : `
+    <table><thead><tr><th>Quote</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>
+    ${list.map(q=>`<tr><td class="num">#${q.QuoteNo}</td><td>${esc(q.CustomerName)}</td><td>${fmtDate(q.Date)}</td><td class="num">${money(q.Total)}</td><td><span class="badge ${q.Status==='converted'?'paid':'partial'}">${q.Status}</span></td></tr>`).join('')}
+    </tbody></table>`}
+  </div>`;
+}
+
+function renderCustomers(){
+  const stats = {};
+  data.salesSummary.forEach(s=>{
+    stats[s.CustomerName] = stats[s.CustomerName] || {total:0,balance:0,count:0};
+    stats[s.CustomerName].total += Number(s.Total);
+    stats[s.CustomerName].balance += Number(s.Balance);
+    stats[s.CustomerName].count += 1;
+  });
+  return `<div class="panel"><h3>👥 Customers</h3>
+    ${data.customers.length===0 ? `<div class="empty">No customers yet.</div>` : `
+    <table><thead><tr><th>Name</th><th>Phone</th><th>Orders</th><th>Total purchased</th><th>Balance owed</th></tr></thead><tbody>
+    ${data.customers.map(c=>{const st=stats[c.Name]||{total:0,balance:0,count:0};
+      return `<tr><td>${esc(c.Name)}</td><td>${esc(c.Phone)}</td><td class="num">${st.count}</td><td class="num">${money(st.total)}</td><td class="num" style="color:${st.balance>0?'var(--rust)':'inherit'}">${money(st.balance)}</td></tr>`;}).join('')}
+    </tbody></table>`}
+  </div>`;
+}
+
+function renderMovements(){
+  const list = [...data.movements].sort((a,b)=>new Date(b.Date)-new Date(a.Date)).slice(0,60);
+  return `<div class="panel"><h3>🔄 Stock movements (latest 60)</h3>
+    ${list.length===0 ? `<div class="empty">No movements yet.</div>` : `
+    <table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Balance after</th><th>Note</th></tr></thead><tbody>
+    ${list.map(m=>`<tr><td>${fmtDate(m.Date)}</td><td>${esc(m.StockName)}</td><td><span class="badge ${m.Type==='in'?'paid':'unpaid'}">${m.Type.toUpperCase()}</span></td><td class="num">${m.Qty}</td><td class="num">${m.BalanceAfter}</td><td>${esc(m.Note)}</td></tr>`).join('')}
+    </tbody></table>`}
+  </div>`;
+}
+
+// ---------- Add stock modal ----------
+function openModal(html){
+  document.getElementById('modalRoot').innerHTML = `<div class="overlay" id="ov">${html}</div>`;
+  document.getElementById('ov').addEventListener('click', e=>{ if(e.target.id==='ov') closeModal(); });
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+document.getElementById('addStockBtn').onclick = ()=>{
+  openModal(`
+    <div class="modal">
+      <h3>Add stock</h3>
+      <div class="field"><label>Existing item or new name</label><input id="m_name" list="m_stocklist" placeholder="e.g. Cypress 2x4x12ft">
+        <datalist id="m_stocklist">${data.stock.map(s=>`<option value="${esc(s.Name)}">`).join('')}</datalist>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Unit</label><input id="m_unit" placeholder="pcs / m³"></div>
+        <div class="field"><label>Price/unit</label><input id="m_price" type="number" min="0"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Qty to add</label><input id="m_qty" type="number" min="0" step="any"></div>
+        <div class="field"><label>Low stock alert</label><input id="m_low" type="number" min="0" value="5"></div>
+      </div>
+      <div class="field"><label>Note</label><input id="m_note" placeholder="e.g. New delivery"></div>
+      <button class="btn primary" style="width:100%;" id="m_save">Save to stock</button>
+    </div>
+  `);
+  document.getElementById('m_save').onclick = async ()=>{
+    const name = document.getElementById('m_name').value.trim();
+    const qty = parseFloat(document.getElementById('m_qty').value)||0;
+    if(!name || qty<=0){ showToast('Enter a name and quantity'); return; }
+    const existing = data.stock.find(s=>s.Name.toLowerCase()===name.toLowerCase());
+    if(existing){
+      data = await apiPost('receiveStock', { stockId: existing.ID, qty, note: document.getElementById('m_note').value });
+    } else {
+      data = await apiPost('addStockItem', { name, unit: document.getElementById('m_unit').value.trim()||'pcs',
+        price: document.getElementById('m_price').value, qty, lowThreshold: document.getElementById('m_low').value });
+    }
+    closeModal(); showToast('Stock updated'); render();
+  };
+};
+
+function openAdjustModal(stockId){
+  const item = data.stock.find(s=>s.ID===stockId);
+  openModal(`
+    <div class="modal">
+      <h3>Adjust — ${esc(item.Name)}</h3>
+      <div class="row2">
+        <div class="field"><label>Quantity on hand</label><input id="a_qty" type="number" min="0" step="any" value="${item.Qty}"></div>
+        <div class="field"><label>Price/unit</label><input id="a_price" type="number" min="0" value="${item.Price}"></div>
+      </div>
+      <div class="field"><label>Low stock alert</label><input id="a_low" type="number" min="0" value="${item.LowThreshold}"></div>
+      <div class="field"><label>Reason</label><input id="a_note" placeholder="e.g. stock count correction"></div>
+      <button class="btn primary" style="width:100%;" id="a_save">Save changes</button>
+    </div>
+  `);
+  document.getElementById('a_save').onclick = async ()=>{
+    data = await apiPost('adjustStock', { stockId: item.ID, qty: document.getElementById('a_qty').value, price: document.getElementById('a_price').value, lowThreshold: document.getElementById('a_low').value, note: document.getElementById('a_note').value });
+    closeModal(); showToast('Stock updated'); render();
+  };
+}
+
+document.getElementById('refreshBtn').onclick = loadData;
+loadData();
+</script>
+</body>
+</html>
