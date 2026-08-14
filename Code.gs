@@ -27,7 +27,7 @@ var BUSINESS_PHONE = '0724112335';
 
 // Africa's Talking SMS credentials — https://africastalking.com (free sandbox to start)
 var AT_USERNAME = 'sandbox';
-var AT_API_KEY = 'PASTE_YOUR_AFRICASTALKING_API_KEY_HERE';
+var AT_API_KEY = 'atsk_5692be6ec847375d260761a0242f262cc47c87bad8405a87baf4f6e2a943904e73b10b0f';
 var AT_SENDER_ID = ''; // optional shortcode/sender ID, leave blank if you don't have one
 var DEFAULT_COUNTRY_CODE = '254'; // Kenya. Change if needed.
 
