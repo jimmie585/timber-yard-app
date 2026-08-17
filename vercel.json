@@ -2,5 +2,13 @@
   "rewrites": [
     { "source": "/employees", "destination": "/employees.html" },
     { "source": "/boss", "destination": "/boss.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
   ]
 }
