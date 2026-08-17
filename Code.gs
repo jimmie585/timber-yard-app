@@ -21,9 +21,13 @@
 // ====== CONFIGURATION — fill these in ======
 var SHEET_ID = '1Ff50HG4QWgLG25BY6vU8lajQSQSrtsT9RQb5VrjgXlI'; // your one Google Sheet — all tabs live inside it
 
-var BUSINESS_NAME = "Mathenge's Timberyard";
+var BUSINESS_NAME = "Rumpess Timber And Boards Center";
 var BUSINESS_LOCATION = 'Nanyuki';
 var BUSINESS_PHONE = '0724112335';
+
+// Shared secret — every request from the app must include this. Blocks anyone who
+// finds your Apps Script URL from calling it directly without also knowing this value.
+var APP_SECRET = '2db87f27ad0374b16826bd9f20f3b7af';
 
 // Africa's Talking SMS credentials — https://africastalking.com (free sandbox to start)
 var AT_USERNAME = 'mathengetimberyard';
@@ -33,6 +37,8 @@ var DEFAULT_COUNTRY_CODE = '254'; // Kenya. Change if needed.
 
 // ====== ROUTES ======
 function doGet(e) {
+  // Security check disabled for now — uncomment when ready to enforce APP_SECRET:
+  // if (e.parameter.secret !== APP_SECRET) return respond({ error: 'Unauthorized' });
   ensureHeaders();
   var action = e.parameter.action || 'getData';
   if (action === 'getData') return respond(getAllData());
@@ -42,6 +48,8 @@ function doGet(e) {
 function doPost(e) {
   ensureHeaders();
   var body = JSON.parse(e.postData.contents);
+  // Security check disabled for now — uncomment when ready to enforce APP_SECRET:
+  // if (body.secret !== APP_SECRET) return respond({ error: 'Unauthorized' });
   try {
     switch (body.action) {
       case 'addStockItem': return respond(addStockItem(body));
@@ -138,6 +146,11 @@ function getAllData() {
   };
 }
 
+function hashPassword(password) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + APP_SECRET);
+  return digest.map(function (b) { var v = (b < 0 ? b + 256 : b).toString(16); return v.length === 1 ? '0' + v : v; }).join('');
+}
+
 function login(body) {
   var rows = custSheet('Users').getDataRange().getValues();
   var uname = String(body.username || '').trim().toLowerCase();
@@ -156,6 +169,7 @@ function addUser(body) {
       return { success: false, error: 'That username already exists' };
     }
   }
+  // Passwords stored as plaintext for now — see hashPassword() below to switch to hashed storage later.
   custSheet('Users').appendRow([nextId('usr'), body.username, body.password, body.role || 'employee', body.name || body.username]);
   return { success: true, data: getAllData() };
 }
