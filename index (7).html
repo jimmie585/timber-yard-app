@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rumpess Timber And Boards Center — Log in</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/common.css">
+<style>
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .card{
+    position:relative;
+    background-color:var(--plank);
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 6px, rgba(74,54,38,0.06) 6px 7px, transparent 7px 14px),
+      radial-gradient(circle at 18px 18px, var(--rivet) 0 3px, var(--rivet-light) 3px 4.5px, transparent 4.5px),
+      radial-gradient(circle at calc(100% - 18px) 18px, var(--rivet) 0 3px, var(--rivet-light) 3px 4.5px, transparent 4.5px),
+      radial-gradient(circle at 18px calc(100% - 18px), var(--rivet) 0 3px, var(--rivet-light) 3px 4.5px, transparent 4.5px),
+      radial-gradient(circle at calc(100% - 18px) calc(100% - 18px), var(--rivet) 0 3px, var(--rivet-light) 3px 4.5px, transparent 4.5px);
+    border:4px solid var(--walnut); border-radius:16px; padding:38px 32px; max-width:360px; width:100%;
+    box-shadow:0 16px 40px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.12);
+  }
+  .mark{width:48px;height:48px;border-radius:12px;margin:0 auto 16px;box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 1px 3px rgba(255,255,255,0.15);
+    background: repeating-linear-gradient(115deg, var(--oak) 0 5px, var(--oak-light) 5px 11px, var(--oak) 11px 16px);}
+  h1{font-size:21px;margin:0 0 4px;text-align:center;color:var(--walnut);}
+  p.sub{color:var(--walnut-soft);font-size:13px;text-align:center;margin:0 0 26px;}
+  label{color:var(--walnut-soft);}
+  .err{background:var(--rust-pale);color:var(--rust);font-size:12.5px;padding:10px 12px;border-radius:8px;margin-bottom:14px;display:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mark"></div>
+  <h1>Rumpess Timber And Boards Center</h1>
+  <p class="sub">Log in to continue</p>
+  <div id="body"></div>
+</div>
+
+<!-- ⚠ These must match the values in employees.html and boss.html ⚠ -->
+<script>
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsZQhhsj6go5hIlQi3NnUaydFvPSk-88RhfVyaqcPB-XYckf-qhb3VOeAEZxOqkp73/exec";
+  const APP_SECRET = "2db87f27ad0374b16826bd9f20f3b7af";
+</script>
+<script src="/assets/common.js"></script>
+<script>
+function renderForm(){
+  document.getElementById('body').innerHTML = `
+    <div class="err" id="err"></div>
+    <div class="field"><label>Username</label><input id="u" autocapitalize="off" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="p" type="password" autocomplete="current-password"></div>
+    <button id="loginBtn">Log in</button>
+  `;
+  document.getElementById('loginBtn').onclick = doLogin;
+  document.getElementById('p').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+}
+
+async function doLogin(){
+  if(!isConfigured()){
+    document.getElementById('body').innerHTML = `<div class="config-warning">Not connected yet. Paste your Apps Script Web App URL and APP_SECRET near the top of this file.</div>`;
+    return;
+  }
+  const u = document.getElementById('u').value.trim();
+  const p = document.getElementById('p').value;
+  const errEl = document.getElementById('err');
+  if(!u || !p){ errEl.textContent = 'Enter both username and password'; errEl.style.display='block'; return; }
+  document.getElementById('loginBtn').textContent = 'Checking…';
+  try{
+    const result = await apiPost('login', { username:u, password:p });
+    if(result.success){
+      localStorage.setItem('tyd_session', JSON.stringify({ username:result.username, role:result.role, name:result.name, ts:Date.now() }));
+      window.location.href = result.role === 'boss' ? '/boss.html' : '/employees.html';
+    } else {
+      errEl.textContent = result.error || 'Login failed';
+      errEl.style.display = 'block';
+      document.getElementById('loginBtn').textContent = 'Log in';
+    }
+  }catch(e){
+    errEl.textContent = 'Could not reach the server. Check your connection.';
+    errEl.style.display = 'block';
+    document.getElementById('loginBtn').textContent = 'Log in';
+  }
+}
+
+const existing = getSession();
+if(existing){
+  window.location.href = existing.role === 'boss' ? '/boss.html' : '/employees.html';
+} else {
+  renderForm();
+}
+</script>
+</body>
+</html>
