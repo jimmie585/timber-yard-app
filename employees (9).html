@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rumpess Timber And Boards Center — Employees</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/common.css?v=3">
+<style>
+  .tabs{padding:14px 20px 0;max-width:760px;margin:0 auto;}
+  main{max-width:760px;margin:0 auto;padding:18px 20px 40px;}
+</style>
+</head>
+<body>
+
+<!-- ⚠ These must match the values in index.html and boss.html ⚠ -->
+<script>
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsZQhhsj6go5hIlQi3NnUaydFvPSk-88RhfVyaqcPB-XYckf-qhb3VOeAEZxOqkp73/exec";
+  const APP_SECRET = "2db87f27ad0374b16826bd9f20f3b7af";
+</script>
+<script src="/assets/common.js?v=3"></script>
+
+<header>
+  <div class="brandrow"><div class="mark"></div><div><div class="name">Rumpess Timber And Boards Center</div><div class="tag" id="roleTag">Employee entry</div></div></div>
+  <div style="display:flex;gap:8px;">
+    <a id="bossLink" href="/boss.html" style="display:none;text-decoration:none;"><button class="btn sm secondary" style="width:auto;">📊 Boss dashboard</button></a>
+    <button class="btn sm secondary" id="refreshBtn" style="width:auto;">↻ Refresh</button>
+    <button class="btn sm secondary" id="logoutBtn" style="width:auto;">Log out</button>
+  </div>
+</header>
+<div class="tabs" id="tabs"></div>
+<main id="main"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Session guard ----
+const session = requireSession();
+document.getElementById('logoutBtn').onclick = logout;
+if(session && session.role === 'boss'){
+  document.getElementById('bossLink').style.display = 'inline-block';
+  document.getElementById('roleTag').textContent = 'Employee entry · logged in as ' + session.name + ' (boss)';
+} else if(session){
+  document.getElementById('roleTag').textContent = 'Employee entry · ' + session.name;
+}
+
+let data = { stock:[], customers:[], salesSummary:[], salesLines:[], payments:[], movements:[], quotations:[], quotationLines:[] };
+let tab = 'sale';
+let saleDraft = { customerName:'', phone:'', email:'', items:[{stockId:'',qty:1,price:0}], paid:0, discount:0 };
+let quoteDraft = { customerName:'', phone:'', email:'', items:[{stockId:'',qty:1,price:0}] };
+
+async function loadData(){
+  if(!isConfigured()){
+    document.getElementById('main').innerHTML = `<div class="config-warning">Not connected yet. Open this file, find <code>APPS_SCRIPT_URL</code> and <code>APP_SECRET</code> near the top, and fill them in.</div>`;
+    return;
+  }
+  try{ data = await apiGet(); render(); }
+  catch(e){ document.getElementById('main').innerHTML = `<div class="config-warning">Could not load data. Check the Apps Script URL and that the deployment is set to "Anyone" access.</div>`; }
+}
+
+function render(){
+  document.getElementById('tabs').innerHTML = ['sale','quote','stock','sales','quotes','customers'].map(t=>
+    `<button class="tab ${tab===t?'active':''}" data-tab="${t}">${t==='sale'?'🧾 New sale':t==='quote'?'📝 New quote':t==='stock'?'🪵 Stock':t==='sales'?'📋 Sales':t==='quotes'?'📄 Quotes':'👤 Customers'}</button>`).join('');
+  document.querySelectorAll('.tab').forEach(el=>el.addEventListener('click',()=>{tab=el.dataset.tab; render();}));
+  const main = document.getElementById('main');
+  if(tab==='sale') main.innerHTML = renderSale();
+  else if(tab==='quote') main.innerHTML = renderQuote();
+  else if(tab==='stock') main.innerHTML = renderStock();
+  else if(tab==='sales') main.innerHTML = renderSalesList();
+  else if(tab==='quotes') main.innerHTML = renderQuotesList();
+  else main.innerHTML = renderCustomers();
+  attach();
+}
+
+function renderSale(){
+  let subtotal=0;
+  saleDraft.items.forEach(li=>{
+    const st = data.stock.find(s=>s.ID===li.stockId);
+    if(st && !li._touched) li.price = st.Price;
+    subtotal += (li.qty||0)*(li.price||0);
+  });
+  const discount = Math.max(saleDraft.discount||0, 0);
+  const total = Math.max(subtotal - discount, 0);
+  const balance = Math.max(total-(saleDraft.paid||0),0);
+  return `
+    <div class="panel">
+      <h3>👤 Customer</h3>
+      <div class="row2">
+        <div class="field"><label>Name</label><input id="custName" list="custList" value="${esc(saleDraft.customerName)}" placeholder="e.g. John Mwangi"></div>
+        <div class="field"><label>Phone</label><input id="custPhone" value="${esc(saleDraft.phone)}" placeholder="07xx xxx xxx"></div>
+      </div>
+      <div class="field"><label>Email (optional)</label><input id="custEmail" type="email" value="${esc(saleDraft.email)}" placeholder="customer@email.com"></div>
+      <div class="hint">Phone gets an SMS on payment. Email gets a receipt automatically.</div>
+      <datalist id="custList">${data.customers.map(c=>`<option value="${esc(c.Name)}">`).join('')}</datalist>
+    </div>
+    <div class="panel">
+      <h3>🪵 Items</h3>
+      ${data.stock.length===0 ? `<div class="empty">Add stock items in the Stock tab first.</div>` : `
+      ${saleDraft.items.map((li,idx)=>`
+        <div class="lineitem">
+          <select data-li="${idx}" data-f="stockId">
+            <option value="">Select item…</option>
+            ${data.stock.map(s=>`<option value="${s.ID}" ${li.stockId===s.ID?'selected':''}>${esc(s.Name)} (${s.Qty} ${esc(s.Unit)})</option>`).join('')}
+          </select>
+          <input type="number" min="0" step="any" data-li="${idx}" data-f="qty" value="${li.qty}" placeholder="Qty">
+          <input type="number" min="0" step="any" data-li="${idx}" data-f="price" value="${li.price}" placeholder="Price">
+          <button class="rm" data-rm="${idx}">✕</button>
+        </div>`).join('')}
+      <button class="btn secondary sm" id="addLine">+ Add item</button>
+      <div class="totalsbox">
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:var(--ink-light);margin-bottom:8px;"><span>Subtotal</span><span class="num">${money(subtotal)}</span></div>
+        <div class="field"><label>Discount (KES)</label><input type="number" min="0" id="discountNow" value="${saleDraft.discount||0}"></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-bottom:10px;"><span>Total</span><span class="num">${money(total)}</span></div>
+        <div class="field"><label>Amount paid now</label><input type="number" min="0" id="paidNow" value="${saleDraft.paid}"></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:${balance>0?'var(--rust)':'var(--forest)'};font-weight:700;"><span>Balance due</span><span class="num">${money(balance)}</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn forest" id="completeSale">Complete sale</button>
+        <button class="btn secondary" id="clearSale">Clear</button>
+      </div>`}
+    </div>
+  `;
+}
+
+function renderQuote(){
+  let total=0;
+  quoteDraft.items.forEach(li=>{
+    const st = data.stock.find(s=>s.ID===li.stockId);
+    if(st && !li._touched) li.price = st.Price;
+    total += (li.qty||0)*(li.price||0);
+  });
+  return `
+    <div class="panel">
+      <h3>👤 Customer</h3>
+      <div class="row2">
+        <div class="field"><label>Name</label><input id="q_custName" list="custList" value="${esc(quoteDraft.customerName)}" placeholder="e.g. John Mwangi"></div>
+        <div class="field"><label>Phone</label><input id="q_custPhone" value="${esc(quoteDraft.phone)}"></div>
+      </div>
+      <div class="field"><label>Email (optional — sends the quote automatically)</label><input id="q_custEmail" type="email" value="${esc(quoteDraft.email)}"></div>
+    </div>
+    <div class="panel">
+      <h3>🪵 Items</h3>
+      ${data.stock.length===0 ? `<div class="empty">Add stock items in the Stock tab first.</div>` : `
+      ${quoteDraft.items.map((li,idx)=>`
+        <div class="lineitem">
+          <select data-qli="${idx}" data-f="stockId">
+            <option value="">Select item…</option>
+            ${data.stock.map(s=>`<option value="${s.ID}" ${li.stockId===s.ID?'selected':''}>${esc(s.Name)} (${s.Qty} ${esc(s.Unit)})</option>`).join('')}
+          </select>
+          <input type="number" min="0" step="any" data-qli="${idx}" data-f="qty" value="${li.qty}" placeholder="Qty">
+          <input type="number" min="0" step="any" data-qli="${idx}" data-f="price" value="${li.price}" placeholder="Price">
+          <button class="rm" data-qrm="${idx}">✕</button>
+        </div>`).join('')}
+      <button class="btn secondary sm" id="addQuoteLine">+ Add item</button>
+      <div class="totalsbox">
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;"><span>Estimated total</span><span class="num">${money(total)}</span></div>
+      </div>
+      <div class="hint" style="margin-top:8px;">This won't touch stock or require payment — it's just an estimate for the customer.</div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn forest" id="createQuote">Create quotation</button>
+        <button class="btn secondary" id="clearQuote">Clear</button>
+      </div>`}
+    </div>
+  `;
+}
+
+function renderQuotesList(){
+  const list = [...(data.quotations||[])].sort((a,b)=>new Date(b.Date)-new Date(a.Date)).slice(0,25);
+  return `
+    <div class="panel">
+      <h3>📄 Quotations</h3>
+      ${list.length===0 ? `<div class="empty">No quotations yet.</div>` : `
+      <table><thead><tr><th>Quote</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+        ${list.map(q=>`<tr><td class="num">#${q.QuoteNo}</td><td>${esc(q.CustomerName)}</td><td class="num">${money(q.Total)}</td><td><span class="badge ${q.Status==='converted'?'paid':'partial'}">${q.Status}</span></td>
+        <td>${q.Status==='open'?`<button class="btn sm forest" data-convert="${q.QuoteID}">Convert to sale</button>`:''} <button class="btn sm secondary" data-emailquote="${q.QuoteID}" data-quoteno="${q.QuoteNo}">Email</button> <button class="btn sm secondary" data-smsquote="${q.QuoteID}" data-quoteno2="${q.QuoteNo}" data-phone2="${esc(q.Phone)}">SMS</button></td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function renderStock(){
+  return `
+    <div class="panel">
+      <h3>🪵 Available stock</h3>
+      <div class="hint">Stock is managed by the boss — ask them to add or adjust items.</div>
+      ${data.stock.length===0 ? `<div class="empty">No stock items yet.</div>` : `
+      <table><thead><tr><th>Item</th><th>Qty on hand</th><th>Price</th></tr></thead><tbody>
+        ${data.stock.map(s=>`<tr class="${Number(s.Qty)<=Number(s.LowThreshold)?'lowrow':''}"><td>${esc(s.Name)} ${Number(s.Qty)<=Number(s.LowThreshold)?'<span class="badge low">LOW</span>':''}</td><td class="num">${s.Qty} ${esc(s.Unit)}</td><td class="num">${money(s.Price)}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function renderSalesList(){
+  const list = [...data.salesSummary].sort((a,b)=>new Date(b.Date)-new Date(a.Date)).slice(0,25);
+  return `
+    <div class="panel">
+      <h3>📋 Recent sales</h3>
+      ${list.length===0 ? `<div class="empty">No sales yet.</div>` : `
+      <table><thead><tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+        ${list.map(s=>`<tr><td class="num">#${s.ReceiptNo}</td><td>${esc(s.CustomerName)}</td><td class="num">${money(s.Total)}</td><td><span class="badge ${s.Status}">${s.Status}</span></td>
+        <td>${Number(s.Balance)>0?`<button class="btn sm secondary" data-pay="${s.SaleID}">Add payment</button>`:''} <button class="btn sm secondary" data-emailsale="${s.SaleID}" data-receipt="${s.ReceiptNo}">Email</button> <button class="btn sm secondary" data-smssale="${s.SaleID}" data-receipt2="${s.ReceiptNo}" data-phone="${esc(s.Phone)}">SMS</button></td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function renderCustomers(){
+  return `
+    <div class="panel">
+      <h3>➕ Add customer</h3>
+      <div class="field"><label>Name</label><input id="c_name"></div>
+      <div class="row2">
+        <div class="field"><label>Phone</label><input id="c_phone"></div>
+        <div class="field"><label>Email</label><input id="c_email" type="email"></div>
+      </div>
+      <button class="btn full" id="addCustBtn">Add customer</button>
+    </div>
+    <div class="panel">
+      <h3>👥 All customers</h3>
+      ${data.customers.length===0 ? `<div class="empty">None yet.</div>` : `
+      <table><thead><tr><th>Name</th><th>Phone</th><th>Email</th></tr></thead><tbody>
+        ${data.customers.map(c=>`<tr><td>${esc(c.Name)}</td><td>${esc(c.Phone)}</td><td>${esc(c.Email)}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function attach(){
+  document.getElementById('refreshBtn').onclick = loadData;
+
+  document.querySelectorAll('[data-li]').forEach(el=>{
+    const handler = ()=>{
+      const idx=Number(el.dataset.li), f=el.dataset.f, li=saleDraft.items[idx];
+      if(f==='stockId'){ li.stockId=el.value; li._touched=false; const st=data.stock.find(s=>s.ID===el.value); if(st) li.price=st.Price; }
+      else if(f==='qty') li.qty=parseFloat(el.value)||0;
+      else if(f==='price'){ li.price=parseFloat(el.value)||0; li._touched=true; }
+      render();
+    };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
+  });
+  document.querySelectorAll('[data-rm]').forEach(el=>el.addEventListener('click',()=>{
+    saleDraft.items.splice(Number(el.dataset.rm),1);
+    if(saleDraft.items.length===0) saleDraft.items.push({stockId:'',qty:1,price:0});
+    render();
+  }));
+  const addLine = document.getElementById('addLine');
+  if(addLine) addLine.onclick = ()=>{ saleDraft.items.push({stockId:'',qty:1,price:0}); render(); };
+
+  document.querySelectorAll('[data-qli]').forEach(el=>{
+    const handler = ()=>{
+      const idx=Number(el.dataset.qli), f=el.dataset.f, li=quoteDraft.items[idx];
+      if(f==='stockId'){ li.stockId=el.value; li._touched=false; const st=data.stock.find(s=>s.ID===el.value); if(st) li.price=st.Price; }
+      else if(f==='qty') li.qty=parseFloat(el.value)||0;
+      else if(f==='price'){ li.price=parseFloat(el.value)||0; li._touched=true; }
+      render();
+    };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
+  });
+  document.querySelectorAll('[data-qrm]').forEach(el=>el.addEventListener('click',()=>{
+    quoteDraft.items.splice(Number(el.dataset.qrm),1);
+    if(quoteDraft.items.length===0) quoteDraft.items.push({stockId:'',qty:1,price:0});
+    render();
+  }));
+  const addQuoteLine = document.getElementById('addQuoteLine');
+  if(addQuoteLine) addQuoteLine.onclick = ()=>{ quoteDraft.items.push({stockId:'',qty:1,price:0}); render(); };
+  const qcn = document.getElementById('q_custName'); if(qcn) qcn.oninput = e=>quoteDraft.customerName=e.target.value;
+  const qcp = document.getElementById('q_custPhone'); if(qcp) qcp.oninput = e=>quoteDraft.phone=e.target.value;
+  const qce = document.getElementById('q_custEmail'); if(qce) qce.oninput = e=>quoteDraft.email=e.target.value;
+  const clearQuote = document.getElementById('clearQuote'); if(clearQuote) clearQuote.onclick = ()=>{ quoteDraft={customerName:'',phone:'',email:'',items:[{stockId:'',qty:1,price:0}]}; render(); };
+  const createQuote = document.getElementById('createQuote'); if(createQuote) createQuote.onclick = doCreateQuote;
+
+  document.querySelectorAll('[data-convert]').forEach(el=>el.onclick = async ()=>{
+    if(!confirm('Convert this quotation into a real sale? This will deduct stock.')) return;
+    const result = await apiPost('convertQuotation', { quoteId: el.dataset.convert, username: session ? session.username : '' });
+    if(result.error){ showToast(result.error); return; }
+    data = result.data; showToast('Converted — receipt #'+result.receiptNo); render();
+  });
+  document.querySelectorAll('[data-emailquote]').forEach(el=>el.onclick = async ()=>{
+    const email = prompt('Send quote #'+el.dataset.quoteno+' to which email?');
+    if(!email) return;
+    await apiPost('emailQuotation', { quoteId: el.dataset.emailquote, email });
+    showToast('Quotation emailed');
+  });
+  document.querySelectorAll('[data-smsquote]').forEach(el=>el.onclick = async ()=>{
+    const phone = prompt('Send quote #'+el.dataset.quoteno2+' to which phone number?', el.dataset.phone2 || '');
+    if(!phone) return;
+    await apiPost('smsQuotation', { quoteId: el.dataset.smsquote, phone });
+    showToast('Quotation SMS sent');
+  });
+  const cn = document.getElementById('custName'); if(cn) cn.oninput = e=>saleDraft.customerName=e.target.value;
+  const cp = document.getElementById('custPhone'); if(cp) cp.oninput = e=>saleDraft.phone=e.target.value;
+  const ce = document.getElementById('custEmail'); if(ce) ce.oninput = e=>saleDraft.email=e.target.value;
+  const pn = document.getElementById('paidNow'); if(pn) pn.oninput = e=>{ saleDraft.paid=parseFloat(e.target.value)||0; render(); };
+  const dn = document.getElementById('discountNow'); if(dn) dn.oninput = e=>{ saleDraft.discount=parseFloat(e.target.value)||0; render(); };
+  const clearSale = document.getElementById('clearSale'); if(clearSale) clearSale.onclick = ()=>{ saleDraft={customerName:'',phone:'',email:'',items:[{stockId:'',qty:1,price:0}],paid:0,discount:0}; render(); };
+  const completeSale = document.getElementById('completeSale'); if(completeSale) completeSale.onclick = doCompleteSale;
+
+  document.querySelectorAll('[data-pay]').forEach(el=>el.onclick = async ()=>{
+    const amount = prompt('Payment amount received?');
+    if(!amount) return;
+    data = await apiPost('addPayment', { saleId: el.dataset.pay, amount, method:'Cash' });
+    showToast('Payment recorded — SMS sent if phone on file'); render();
+  });
+  document.querySelectorAll('[data-emailsale]').forEach(el=>el.onclick = async ()=>{
+    const email = prompt('Send receipt #'+el.dataset.receipt+' to which email?');
+    if(!email) return;
+    await apiPost('emailReceipt', { saleId: el.dataset.emailsale, email });
+    showToast('Receipt emailed');
+  });
+  document.querySelectorAll('[data-smssale]').forEach(el=>el.onclick = async ()=>{
+    const phone = prompt('Send receipt #'+el.dataset.receipt2+' to which phone number?', el.dataset.phone || '');
+    if(!phone) return;
+    await apiPost('smsReceipt', { saleId: el.dataset.smssale, phone });
+    showToast('Receipt SMS sent');
+  });
+  const addCustBtn = document.getElementById('addCustBtn');
+  if(addCustBtn) addCustBtn.onclick = async ()=>{
+    const name = document.getElementById('c_name').value.trim();
+    if(!name){ showToast('Enter a name'); return; }
+    data = await apiPost('addCustomer', { name, phone: document.getElementById('c_phone').value.trim(), email: document.getElementById('c_email').value.trim() });
+    showToast('Customer added'); render();
+  };
+}
+
+async function doCreateQuote(){
+  const name = quoteDraft.customerName.trim();
+  if(!name){ showToast('Enter a customer name'); return; }
+  const items = quoteDraft.items.filter(li=>li.stockId && li.qty>0).map(li=>{
+    const st = data.stock.find(s=>s.ID===li.stockId);
+    return { name: st.Name, qty: li.qty, price: li.price };
+  });
+  if(items.length===0){ showToast('Add at least one item'); return; }
+  const result = await apiPost('addQuotation', { customerName:name, phone:quoteDraft.phone, email:quoteDraft.email, items });
+  data = result.data || result;
+  showToast('Quotation #' + result.quoteNo + ' created' + (result.emailSent ? ' — emailed' : '') + (result.smsSent ? ' — SMS sent' : ''));
+  quoteDraft = { customerName:'', phone:'', email:'', items:[{stockId:'',qty:1,price:0}] };
+  render();
+}
+
+async function doCompleteSale(){
+  const name = saleDraft.customerName.trim();
+  if(!name){ showToast('Enter a customer name'); return; }
+  const items = saleDraft.items.filter(li=>li.stockId && li.qty>0).map(li=>{
+    const st = data.stock.find(s=>s.ID===li.stockId);
+    return { stockId: st.ID, name: st.Name, qty: li.qty, price: li.price };
+  });
+  if(items.length===0){ showToast('Add at least one item'); return; }
+  for(const li of items){
+    const st = data.stock.find(s=>s.ID===li.stockId);
+    if(li.qty > st.Qty){ showToast('Not enough stock: '+st.Name); return; }
+  }
+  const result = await apiPost('addSale', { customerName:name, phone:saleDraft.phone, email:saleDraft.email, items, paid:saleDraft.paid, discount:saleDraft.discount||0, username: session ? session.username : '' });
+  data = result.data || result;
+  showToast('Sale recorded — receipt #' + (result.receiptNo||'') + (result.emailSent ? ' — emailed' : '') + (result.smsSent ? ' — SMS sent' : ''));
+  saleDraft = { customerName:'', phone:'', email:'', items:[{stockId:'',qty:1,price:0}], paid:0, discount:0 };
+  render();
+}
+
+loadData();
+</script>
+</body>
+</html>
