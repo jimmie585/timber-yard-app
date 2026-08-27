@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Connection Test</title>
+<style>
+  body{font-family:monospace;background:#111;color:#0f0;padding:30px;font-size:16px;line-height:1.6;}
+  .fail{color:#f55;}
+  .ok{color:#5f5;}
+  pre{white-space:pre-wrap;word-break:break-all;background:#000;padding:15px;border-radius:8px;}
+</style>
+</head>
+<body>
+<h2>Testing connection to your backend...</h2>
+<div id="result">Please wait...</div>
+
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsZQhhsj6go5hIlQi3NnUaydFvPSk-88RhfVyaqcPB-XYckf-qhb3VOeAEZxOqkp73/exec";
+
+async function test(){
+  const el = document.getElementById('result');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=getData');
+    const text = await res.text();
+    el.innerHTML = '<p class="ok">SUCCESS — status ' + res.status + '</p><pre>' + text.substring(0, 500) + '</pre>';
+  } catch(e) {
+    el.innerHTML = '<p class="fail">FAILED</p><pre>' + e.toString() + '\n\n' + (e.stack||'') + '</pre>';
+  }
+}
+test();
+</script>
+</body>
+</html>
