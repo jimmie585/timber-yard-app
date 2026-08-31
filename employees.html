@@ -82,7 +82,7 @@ function renderSale(){
   const balance = Math.max(total-(saleDraft.paid||0),0);
   return `
     <div class="panel">
-      <h3>👤 Customer</h3>
+      <h3> Customer</h3>
       <div class="row2">
         <div class="field"><label>Name</label><input id="custName" list="custList" value="${esc(saleDraft.customerName)}" placeholder="e.g. John Mwangi"></div>
         <div class="field"><label>Phone</label><input id="custPhone" value="${esc(saleDraft.phone)}" placeholder="07xx xxx xxx"></div>
@@ -92,7 +92,7 @@ function renderSale(){
       <datalist id="custList">${data.customers.map(c=>`<option value="${esc(c.Name)}">`).join('')}</datalist>
     </div>
     <div class="panel">
-      <h3>🪵 Items</h3>
+      <h3> Items</h3>
       ${data.stock.length===0 ? `<div class="empty">Add stock items in the Stock tab first.</div>` : `
       ${saleDraft.items.map((li,idx)=>`
         <div class="lineitem">
@@ -141,7 +141,7 @@ function renderQuote(){
   });
   return `
     <div class="panel">
-      <h3>👤 Customer</h3>
+      <h3> Customer</h3>
       <div class="row2">
         <div class="field"><label>Name</label><input id="q_custName" list="custList" value="${esc(quoteDraft.customerName)}" placeholder="e.g. John Mwangi"></div>
         <div class="field"><label>Phone</label><input id="q_custPhone" value="${esc(quoteDraft.phone)}"></div>
@@ -149,7 +149,7 @@ function renderQuote(){
       <div class="field"><label>Email (optional — sends the quote automatically)</label><input id="q_custEmail" type="email" value="${esc(quoteDraft.email)}"></div>
     </div>
     <div class="panel">
-      <h3>🪵 Items</h3>
+      <h3> Items</h3>
       ${data.stock.length===0 ? `<div class="empty">Add stock items in the Stock tab first.</div>` : `
       ${quoteDraft.items.map((li,idx)=>`
         <div class="lineitem">
@@ -212,7 +212,7 @@ function renderSalesList(){
   const list = [...data.salesSummary].sort((a,b)=>new Date(b.Date)-new Date(a.Date)).slice(0,25);
   return `
     <div class="panel">
-      <h3>📋 Recent sales</h3>
+      <h3> Recent sales</h3>
       ${list.length===0 ? `<div class="empty">No sales yet.</div>` : `
       <table><thead><tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
         ${list.map(s=>`<tr><td class="num">#${s.ReceiptNo}</td><td>${esc(s.CustomerName)}</td><td class="num">${money(s.Total)}</td><td><span class="badge ${s.Status}">${s.Status}</span></td>
@@ -225,7 +225,7 @@ function renderSalesList(){
 function renderCustomers(){
   return `
     <div class="panel">
-      <h3>➕ Add customer</h3>
+      <h3> Add customer</h3>
       <div class="field"><label>Name</label><input id="c_name"></div>
       <div class="row2">
         <div class="field"><label>Phone</label><input id="c_phone"></div>
@@ -234,7 +234,7 @@ function renderCustomers(){
       <button class="btn full" id="addCustBtn">Add customer</button>
     </div>
     <div class="panel">
-      <h3>👥 All customers</h3>
+      <h3> All customers</h3>
       ${data.customers.length===0 ? `<div class="empty">None yet.</div>` : `
       <table><thead><tr><th>Name</th><th>Phone</th><th>Email</th></tr></thead><tbody>
         ${data.customers.map(c=>`<tr><td>${esc(c.Name)}</td><td>${esc(c.Phone)}</td><td>${esc(c.Email)}</td></tr>`).join('')}
